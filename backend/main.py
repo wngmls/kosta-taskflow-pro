@@ -13,6 +13,8 @@ from schemas import TaskCreate, TaskUpdate, TaskListResponse, TaskResponse
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
 
 models.Base.metadata.create_all(bind=engine)
+from database import migrate
+migrate()
 
 app = FastAPI(title="TaskFlow Pro API", version="1.0.0")
 
@@ -56,6 +58,18 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
 @app.delete("/api/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: int, db: Session = Depends(get_db)):
     crud.delete_task(db, task_id)
+
+
+@app.get("/api/categories", response_model=list[str])
+def list_categories(db: Session = Depends(get_db)):
+    from sqlalchemy import select, distinct
+    rows = db.execute(
+        select(distinct(models.Task.category))
+        .where(models.Task.category.isnot(None))
+        .where(models.Task.category != "")
+        .order_by(models.Task.category)
+    ).scalars().all()
+    return rows
 
 
 # 프론트엔드 정적 파일 서빙 — API 라우트 뒤에 등록해야 충돌 없음

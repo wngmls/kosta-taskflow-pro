@@ -52,6 +52,12 @@ async function deleteTask(id) {
     if (!res.ok) throw new Error('삭제 실패');
 }
 
+async function fetchCategories() {
+    const res = await fetch(`${API_BASE}/api/categories`);
+    if (!res.ok) return [];
+    return res.json();
+}
+
 // ── 유틸 ──────────────────────────────────────────────────────────────────────
 // D-N HH:MM 형식으로 변환
 function formatDue(isoStr) {
@@ -93,17 +99,41 @@ const STATUS_BADGE = {
 
 // ── 렌더 ──────────────────────────────────────────────────────────────────────
 let taskCache = [];
+let activeCategory = null;
 
 // 드래그 중인 태스크 id
 let draggingId = null;
 
 const COL_STATUS = { 'col-todo': 'todo', 'col-inprogress': 'in_progress', 'col-done': 'done' };
 
+function renderFilterBar(tasks) {
+    const categories = [...new Set(tasks.map(t => t.category).filter(Boolean))].sort();
+    const bar = document.getElementById('filterBar');
+    bar.innerHTML = ['전체', ...categories].map(cat => {
+        const val = cat === '전체' ? null : cat;
+        const isActive = activeCategory === val;
+        return `<button data-cat="${cat === '전체' ? '' : escapeHtml(cat)}"
+          class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+          ${isActive
+            ? 'bg-blue-500 text-white'
+            : 'bg-gray-100 dark:bg-[#3A3A3C] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#4A4A4C]'
+          }">${escapeHtml(cat)}</button>`;
+    }).join('');
+    bar.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            activeCategory = btn.dataset.cat || null;
+            renderBoard(taskCache);
+            renderFilterBar(taskCache);
+        });
+    });
+}
+
 function renderBoard(tasks) {
     taskCache = tasks;
+    const visible = activeCategory ? tasks.filter(t => t.category === activeCategory) : tasks;
 
     const cols = { todo: [], in_progress: [], done: [] };
-    tasks.forEach(t => { if (cols[t.status]) cols[t.status].push(t); });
+    visible.forEach(t => { if (cols[t.status]) cols[t.status].push(t); });
 
     const colEl = { todo: 'col-todo', in_progress: 'col-inprogress', done: 'col-done' };
     const cntEl = { todo: 'count-todo', in_progress: 'count-inprogress', done: 'count-done' };
@@ -179,6 +209,9 @@ function renderCard(task) {
             ? 'text-red-500 dark:text-red-400'
             : 'text-gray-400 dark:text-gray-500'}">${due}</span>`
         : '';
+    const catHtml = task.category
+        ? `<span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-medium">${escapeHtml(task.category)}</span>`
+        : '';
 
     return `
     <article data-task-id="${task.id}" draggable="true"
@@ -213,6 +246,7 @@ function renderCard(task) {
         <span class="text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[task.status]}">
           ${STATUS_LABEL[task.status]}
         </span>
+        ${catHtml}
         ${dueHtml}
       </div>
     </article>`;
@@ -225,7 +259,10 @@ function renderEmptySlot() {
 // ── 폴링 ──────────────────────────────────────────────────────────────────────
 async function loadAndRender() {
     try {
-        const tasks = await fetchTasks();
+        const [tasks, categories] = await Promise.all([fetchTasks(), fetchCategories()]);
+        const dl = document.getElementById('categoryList');
+        dl.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+        renderFilterBar(tasks);
         renderBoard(tasks);
     } catch {
         // 폴링 실패는 조용히 무시 — 다음 주기에 재시도
@@ -241,6 +278,7 @@ const modalTitle = document.getElementById('modalTitle');
 const taskForm = document.getElementById('taskForm');
 const fTitle = document.getElementById('fTitle');
 const fDesc = document.getElementById('fDesc');
+const fCategory = document.getElementById('fCategory');
 const fStatus = document.getElementById('fStatus');
 const fDueAt = document.getElementById('fDueAt');
 const formError = document.getElementById('formError');
@@ -250,6 +288,7 @@ function openModal(title, values = {}) {
     modalTitle.textContent = title;
     fTitle.value = values.title ?? '';
     fDesc.value = values.description ?? '';
+    fCategory.value = values.category ?? '';
     fStatus.value = values.status ?? 'todo';
     fDueAt.value = toDatetimeLocal(values.due_at);
     formError.classList.add('hidden');
@@ -291,6 +330,7 @@ taskForm.addEventListener('submit', async e => {
     const payload = {
         title,
         description: fDesc.value.trim() || null,
+        category: fCategory.value.trim() || null,
         status: fStatus.value,
         due_at: fDueAt.value ? new Date(fDueAt.value).toISOString() : null,
     };

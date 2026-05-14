@@ -8,6 +8,7 @@ class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.todo
+    category: Optional[str] = Field(None, max_length=100)
     due_at: Optional[datetime] = None
 
 
@@ -15,6 +16,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = None
     status: Optional[TaskStatus] = None
+    category: Optional[str] = Field(None, max_length=100)
     due_at: Optional[datetime] = None
 
 
@@ -24,6 +26,7 @@ class TaskListResponse(BaseModel):
     id: int
     title: str
     status: TaskStatus
+    category: Optional[str]
     due_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

@@ -24,3 +24,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def migrate():
+    """기존 DB에 누락된 컬럼을 추가한다 — Alembic 없이 SQLite ALTER TABLE 사용"""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    try:
+        existing = [c["name"] for c in inspector.get_columns("tasks")]
+        if "category" not in existing:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN category VARCHAR(100)"))
+                conn.commit()
+    except Exception:
+        pass

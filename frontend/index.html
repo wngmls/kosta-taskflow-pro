@@ -51,8 +51,13 @@
     </div>
   </header>
 
+  <!-- 카테고리 필터 바 -->
+  <div class="max-w-5xl mx-auto px-4 pt-4 pb-1">
+    <div id="filterBar" class="flex gap-2 flex-wrap items-center"></div>
+  </div>
+
   <!-- 보드 -->
-  <main class="max-w-5xl mx-auto px-4 py-6">
+  <main class="max-w-5xl mx-auto px-4 py-4">
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
       <!-- 할 일 -->
@@ -105,6 +110,13 @@
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">설명</label>
           <textarea id="fDesc" rows="2" placeholder="상세 설명 (선택 사항)"
             class="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#3A3A3C] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"></textarea>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">카테고리</label>
+          <input id="fCategory" type="text" list="categoryList" maxlength="100" placeholder="카테고리 입력 또는 선택"
+            class="h-11 px-3 rounded-xl border border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#3A3A3C] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+          <datalist id="categoryList"></datalist>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
