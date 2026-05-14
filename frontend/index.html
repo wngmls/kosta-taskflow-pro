@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow Pro</title>
+  <!-- 테마 깜빡임 방지: 렌더 전에 dark 클래스 적용 -->
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-[#F2F2F7] dark:bg-[#1C1C1E] font-sans min-h-screen transition-colors duration-200">
+
+  <!-- 헤더 -->
+  <header class="sticky top-0 z-10 bg-white/80 dark:bg-[#1C1C1E]/90 backdrop-blur-md border-b border-gray-200/60 dark:border-[#3A3A3C]/60">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+      <h1 class="text-base font-semibold text-gray-900 dark:text-white tracking-tight">TaskFlow Pro</h1>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle"
+          class="h-11 w-11 flex items-center justify-center rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
+          aria-label="테마 전환">
+          <svg id="iconMoon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
+          </svg>
+          <svg id="iconSun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+          </svg>
+        </button>
+        <button id="addBtn"
+          class="h-11 px-4 bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-sm font-medium rounded-xl transition-all">
+          + 새 태스크
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 보드 -->
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+      <!-- 할 일 -->
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2 px-1">
+          <span class="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500"></span>
+          <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">할 일</h2>
+          <span id="count-todo" class="ml-auto text-xs text-gray-400 dark:text-gray-500 font-medium tabular-nums"></span>
+        </div>
+        <div id="col-todo" class="flex flex-col gap-2 min-h-16"></div>
+      </section>
+
+      <!-- 진행 중 -->
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2 px-1">
+          <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+          <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">진행 중</h2>
+          <span id="count-inprogress" class="ml-auto text-xs text-gray-400 dark:text-gray-500 font-medium tabular-nums"></span>
+        </div>
+        <div id="col-inprogress" class="flex flex-col gap-2 min-h-16"></div>
+      </section>
+
+      <!-- 완료 -->
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2 px-1">
+          <span class="w-2 h-2 rounded-full bg-green-400"></span>
+          <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">완료</h2>
+          <span id="count-done" class="ml-auto text-xs text-gray-400 dark:text-gray-500 font-medium tabular-nums"></span>
+        </div>
+        <div id="col-done" class="flex flex-col gap-2 min-h-16"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- 추가/수정 모달 -->
+  <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div id="modalOverlay" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md bg-white dark:bg-[#2C2C2E] rounded-2xl shadow-2xl p-6">
+      <h2 id="modalTitle" class="text-base font-semibold text-gray-900 dark:text-white mb-5"></h2>
+      <form id="taskForm" class="flex flex-col gap-4" novalidate>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">제목 <span class="text-red-500">*</span></label>
+          <input id="fTitle" type="text" maxlength="200" placeholder="태스크 제목을 입력하세요"
+            class="h-11 px-3 rounded-xl border border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#3A3A3C] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">설명</label>
+          <textarea id="fDesc" rows="2" placeholder="상세 설명 (선택 사항)"
+            class="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#3A3A3C] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">상태</label>
+            <select id="fStatus"
+              class="h-11 px-3 rounded-xl border border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#3A3A3C] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+              <option value="todo">할 일</option>
+              <option value="in_progress">진행 중</option>
+              <option value="done">완료</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">마감시각</label>
+            <input id="fDueAt" type="datetime-local"
+              class="h-11 px-3 rounded-xl border border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#3A3A3C] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+          </div>
+        </div>
+
+        <div id="formError" class="hidden text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-xl"></div>
+
+        <div class="flex gap-2 pt-1">
+          <button type="button" id="cancelBtn"
+            class="flex-1 h-11 rounded-xl border border-gray-200 dark:border-[#3A3A3C] text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-[#3A3A3C] transition-colors">
+            취소
+          </button>
+          <button type="submit"
+            class="flex-1 h-11 rounded-xl bg-blue-500 hover:bg-blue-600 active:scale-95 text-white font-medium transition-all">
+            저장
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
