@@ -94,6 +94,11 @@ const STATUS_BADGE = {
 // ── 렌더 ──────────────────────────────────────────────────────────────────────
 let taskCache = [];
 
+// 드래그 중인 태스크 id
+let draggingId = null;
+
+const COL_STATUS = { 'col-todo': 'todo', 'col-inprogress': 'in_progress', 'col-done': 'done' };
+
 function renderBoard(tasks) {
     taskCache = tasks;
 
@@ -110,7 +115,7 @@ function renderBoard(tasks) {
         document.getElementById(cntEl[status]).textContent = list.length || '';
     });
 
-    // 카드 버튼 이벤트 연결
+    // 카드 이벤트 연결
     document.querySelectorAll('[data-task-id]').forEach(card => {
         const id = Number(card.dataset.taskId);
         card.querySelector('.btn-edit').addEventListener('click', e => {
@@ -121,8 +126,48 @@ function renderBoard(tasks) {
             e.stopPropagation();
             handleDelete(id);
         });
-        // 카드 본문 클릭 → 수정 모달
         card.addEventListener('click', () => openEditModal(id));
+
+        // 드래그 시작
+        card.addEventListener('dragstart', e => {
+            draggingId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            // 반투명 효과 — 다음 프레임에서 적용해야 고스트 이미지에 영향 없음
+            requestAnimationFrame(() => card.classList.add('opacity-40'));
+        });
+        card.addEventListener('dragend', () => {
+            draggingId = null;
+            card.classList.remove('opacity-40');
+        });
+    });
+
+    // 컬럼 드롭존 이벤트 연결
+    Object.keys(COL_STATUS).forEach(colId => {
+        const col = document.getElementById(colId);
+        col.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            col.classList.add('ring-2', 'ring-blue-400', 'ring-inset', 'rounded-xl');
+        });
+        col.addEventListener('dragleave', e => {
+            // 자식 요소로 이동 시 이벤트 무시
+            if (col.contains(e.relatedTarget)) return;
+            col.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'rounded-xl');
+        });
+        col.addEventListener('drop', async e => {
+            e.preventDefault();
+            col.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'rounded-xl');
+            if (!draggingId) return;
+            const newStatus = COL_STATUS[colId];
+            const task = taskCache.find(t => t.id === draggingId);
+            if (!task || task.status === newStatus) return;
+            try {
+                await updateTask(draggingId, { status: newStatus });
+                await loadAndRender();
+            } catch {
+                alert('상태 변경에 실패했습니다.');
+            }
+        });
     });
 }
 
@@ -136,9 +181,9 @@ function renderCard(task) {
         : '';
 
     return `
-    <article data-task-id="${task.id}"
+    <article data-task-id="${task.id}" draggable="true"
       class="group bg-white/80 dark:bg-[#2C2C2E]/80 backdrop-blur-md border border-gray-200/60 dark:border-[#3A3A3C]/60
-             rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-2">
+             rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing p-4 flex flex-col gap-2">
       <div class="flex items-start gap-2">
         <p class="flex-1 text-sm font-medium text-gray-900 dark:text-white leading-snug break-words">
           ${escapeHtml(task.title)}
